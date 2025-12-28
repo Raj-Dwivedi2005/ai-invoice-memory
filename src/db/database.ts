@@ -34,7 +34,7 @@ db.prepare(`
 export interface MemoryRecord {
   id: string;
   vendor: string;
-  type: "vendor" | "correction" | "resolution";
+  type: "VENDOR" | "CORRECTION" | "RESOLUTION";
   key: string;
   value: string;
   confidence: number;
@@ -55,7 +55,7 @@ export function insertMemory(
   db.prepare(`
     INSERT INTO memory
     (id, vendor, type, key, value, confidence, approvedCount, rejectedCount, usageCount, lastUpdated)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     Date.now().toString(),
     vendor,
@@ -77,21 +77,37 @@ export function getMemoryByVendor(vendor: string): MemoryRecord[] {
     .all(vendor) as MemoryRecord[];
 }
 
-// Update memory confidence
-export function updateMemory(
-  id: string,
-  confidence: number
-) {
+// ✅ Approve memory (reinforcement)
+export function approveMemory(id: string) {
   db.prepare(`
     UPDATE memory
-    SET confidence = ?, usageCount = usageCount + 1, lastUpdated = ?
+    SET 
+      approvedCount = approvedCount + 1,
+      confidence = MIN(confidence + 0.1, 1),
+      usageCount = usageCount + 1,
+      lastUpdated = ?
     WHERE id = ?
   `).run(
-    confidence,
     new Date().toISOString(),
     id
   );
 }
+
+// ❌ Reject memory (decay)
+export function rejectMemory(id: string) {
+  db.prepare(`
+    UPDATE memory
+    SET 
+      rejectedCount = rejectedCount + 1,
+      confidence = MAX(confidence - 0.2, 0),
+      lastUpdated = ?
+    WHERE id = ?
+  `).run(
+    new Date().toISOString(),
+    id
+  );
+}
+
 
 // Check if invoice is duplicate
 export function isDuplicateInvoice(
