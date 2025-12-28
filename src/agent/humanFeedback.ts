@@ -38,4 +38,16 @@ export function applyHumanCorrection(
       }
     }
   }
+
+  // 🟢 CORRECT PLACE — inside the function
+  if (vendor === "Parts AG" && approved) {
+    insertMemory(
+      "Parts AG",
+      "VENDOR",
+      "vatInclusivePricing",
+      "true",
+      0.8
+    );
+  }
 }
+
