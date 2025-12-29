@@ -55,6 +55,7 @@ are flagged for human review and do **not** create conflicting memory entries.
 
 ## 🏗️ Project Structure
 
+```text
 src/
 ├── agent/
 │   ├── processInvoice.ts     # Core invoice logic & learning
