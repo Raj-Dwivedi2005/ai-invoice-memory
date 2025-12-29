@@ -57,27 +57,28 @@ are flagged for human review and do **not** create conflicting memory entries.
 
 src/
 ├── agent/
-│ ├── processInvoice.ts # Core invoice logic & learning
-│ ├── humanFeedback.ts # Applies human corrections
-│ └── types.ts # Shared TypeScript types
+│   ├── processInvoice.ts     # Core invoice logic & learning
+│   ├── humanFeedback.ts      # Applies human corrections
+│   └── types.ts              # Shared TypeScript types
 │
 ├── data/
-│ ├── invoices.json # Input invoices
-│ ├── purchase_orders.json # PO reference data
-│ ├── delivery_notes.json # Delivery notes
-│ ├── reference_data.json # Aggregated reference data
-│ └── human_corrections.json
+│   ├── invoices.json         # Input invoices
+│   ├── purchase_orders.json  # Purchase order reference data
+│   ├── delivery_notes.json   # Delivery notes
+│   ├── reference_data.json   # Aggregated reference data
+│   └── human_corrections.json
 │
 ├── db/
-│ └── database.ts # Memory persistence
+│   └── database.ts           # Memory persistence
 │
 ├── demo/
-│ └── runDemo.ts # Sequential demo runner
+│   └── runDemo.ts            # Sequential demo runner
 │
 ├── memory/
-│ └── memory.db # Generated at runtime
+│   └── memory.db             # Generated at runtime
 │
 └── utils/, engine/, test/
+
 
 
 ---
@@ -107,14 +108,15 @@ The demo runner processes all invoices sequentially and prints:
 - Memory updates
 - Audit trail
 
-### Run the demo:
+### ▶️ Run the Demo:
 
 ```bash
 npm install
 npm run demo
 
+--- 
 
-📊 Verified Outcomes
+### 📊 Verified Outcomes
 
 ✔ Supplier GmbH service dates auto-filled
 ✔ Supplier GmbH PO auto-matching
@@ -124,31 +126,37 @@ npm run demo
 ✔ Duplicate invoices correctly flagged
 
 
-🛠️ Tech Stack
-
-TypeScript
-
-Node.js
-
-ts-node
-
-Lightweight local persistence (file-based memory)
+---  
 
 
+### 🛠️ Tech Stack
 
-🎥 Demo Video
+- TypeScript
+- Node.js
+- ts-node
+- Lightweight local persistence (file-based memory)
+
+--- 
+
+
+### 🎥 Demo Video
 
 📹 Demo video link is attached directly in the submission email, as required.
+
+--- 
 
 
 ## 📬 Submission
 
 This repository contains the solution submitted as part of the technical assignment for Flowbit AI.
 
+---
 
-👤 Author
+
+### 👤 Author
 
 Raj Dwivedi
 📧 Email: rajiaf202704@gmail.com
-🔗 GitHub: https://github.com/
-<Raj-Dwivedi2005>
+🔗 GitHub: https://github.com/Raj-Dwivedi2005
+
+---
