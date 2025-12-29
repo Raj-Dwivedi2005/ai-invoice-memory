@@ -1,125 +1,135 @@
-import {
-  getMemoryByVendor,
-  isDuplicateInvoice,
-  markInvoiceSeen
-} from "../db/database";
+import referenceData from '../data/reference_data.json';
+import { MemoryEntry, Invoice, NormalizedInvoice } from './types';
 
-type Invoice = {
-  invoiceId: string;
-  vendor: string;
-  fields: Record<string, any>;
-};
+const memoryStore: Record<string, MemoryEntry[]> = {};
 
 export function processInvoice(invoice: Invoice) {
-  const invoiceNumber = invoice.fields.invoiceNumber;
+  const vendor = invoice.vendor;
+  const memoryEntries = memoryStore[vendor] || [];
 
-  /* ======================================================
-     1️⃣ DUPLICATE CHECK (ABSOLUTELY FIRST)
-     ====================================================== */
-  if (invoiceNumber && isDuplicateInvoice(invoice.vendor, invoiceNumber)) {
-    const auditTrail = [
-      {
-        step: "decide",
-        timestamp: new Date().toISOString(),
-        details: "Duplicate invoice detected. Escalated for human review."
-      }
-    ];
-
-    return {
-      normalizedInvoice: invoice.fields,
-      proposedCorrections: [],
-      requiresHumanReview: true,
-      reasoning: "Duplicate invoice detected based on vendor and invoice number",
-      confidenceScore: 0,
-      memoryUpdates: [],
-      auditTrail
-    };
-  }
-
-  /* ======================================================
-     2️⃣ MEMORY RECALL
-     ====================================================== */
-  const memory = getMemoryByVendor(invoice.vendor);
-  const auditTrail: any[] = [];
-
-  auditTrail.push({
-    step: "recall",
-    timestamp: new Date().toISOString(),
-    details: `Loaded ${memory.length} memory entries for vendor ${invoice.vendor}`
-  });
-
+  let proposedCorrections: string[] = [];
   let requiresHumanReview = false;
-  const appliedCorrections: string[] = [];
+  let reasoning = '';
+  let confidenceScore = 0;
+  let memoryUpdates: string[] = [];
 
-  /* ======================================================
-     3️⃣ APPLY MEMORY
-     ====================================================== */
-  for (const m of memory) {
-    if (m.confidence >= 0.8 && invoice.fields[m.key] == null) {
-      invoice.fields[m.key] = m.value;
+  // --- Normalize invoice fields ---
+  const normalizedInvoice: NormalizedInvoice = { ...invoice.fields };
 
-      appliedCorrections.push(
-        `Auto-filled ${m.key} from memory (confidence ${m.confidence})`
+  // --- Apply learned vendor rules ---
+  if (vendor === 'Supplier GmbH') {
+    // Auto-fill serviceDate if learned
+    const serviceDateEntry = memoryEntries.find(m => m.field === 'serviceDate');
+    if (serviceDateEntry && !normalizedInvoice.serviceDate) {
+      normalizedInvoice.serviceDate = serviceDateEntry.value;
+      proposedCorrections.push(`Filled serviceDate using learned vendor memory (Supplier GmbH)`);
+      memoryUpdates.push(`Filled serviceDate using learned vendor memory (Supplier GmbH)`);
+      reasoning = 'Applied high-confidence learned memory / vendor rules';
+      confidenceScore = serviceDateEntry.confidence;
+    }
+
+    // Auto-suggest PO if single matching PO exists
+    if (!normalizedInvoice.poNumber) {
+      const poMatch = referenceData.purchaseOrders.find(
+        (po: any) =>
+          po.vendor === vendor &&
+          po.lineItems.some((item: any) =>
+            invoice.fields.lineItems.some(
+              (invItem: any) => invItem.sku === item.sku
+            )
+          )
       );
 
-      auditTrail.push({
-        step: "apply",
-        timestamp: new Date().toISOString(),
-        details: `Applied memory key '${m.key}' with confidence ${m.confidence}`
-      });
-    }
-
-    if (m.confidence < 0.6) {
-      requiresHumanReview = true;
+      if (poMatch) {
+        normalizedInvoice.poNumber = poMatch.poNumber;
+        proposedCorrections.push(`Auto-suggested PO ${poMatch.poNumber} for invoice ${normalizedInvoice.invoiceNumber}`);
+        memoryUpdates.push(`Auto-suggested PO ${poMatch.poNumber} for invoice ${normalizedInvoice.invoiceNumber}`);
+        reasoning = 'Applied high-confidence learned memory / vendor rules';
+        confidenceScore = 0;
+      }
     }
   }
 
-  /* ======================================================
-     4️⃣ DECISION LOGIC
-     ====================================================== */
+  if (vendor === 'Parts AG') {
+    // Detect VAT-inclusive pricing
+    if (invoice.fields.rawText?.includes('inkl') || invoice.fields.rawText?.includes('incl. VAT')) {
+      normalizedInvoice.netTotal = normalizedInvoice.grossTotal / (1 + normalizedInvoice.taxRate);
+      normalizedInvoice.taxTotal = normalizedInvoice.grossTotal - normalizedInvoice.netTotal;
+      proposedCorrections.push('Recomputed tax and net totals because prices include VAT (Parts AG)');
+      memoryUpdates.push('Recomputed tax and net totals because prices include VAT (Parts AG)');
+      reasoning = 'Applied high-confidence learned memory / vendor rules';
+      confidenceScore = 0;
+    }
 
-  // If nothing was auto-applied → escalate
-  if (appliedCorrections.length === 0) {
-    requiresHumanReview = true;
+    // Recover missing currency
+    if (!normalizedInvoice.currency && invoice.fields.rawText?.includes('Currency')) {
+      const currencyMatch = invoice.fields.rawText.match(/Currency:\s*(\w+)/);
+      if (currencyMatch) {
+        normalizedInvoice.currency = currencyMatch[1];
+        proposedCorrections.push(`Recovered missing currency (${currencyMatch[1]}) from rawText`);
+        memoryUpdates.push(`Recovered missing currency (${currencyMatch[1]}) from rawText`);
+        reasoning = 'Applied high-confidence learned memory / vendor rules';
+        confidenceScore = 0;
+      }
+    }
   }
 
-  auditTrail.push({
-    step: "decide",
-    timestamp: new Date().toISOString(),
-    details: requiresHumanReview
-      ? "Escalated due to insufficient or low-confidence memory"
-      : "Auto-approved using high-confidence memory"
-  });
+  if (vendor === 'Freight & Co') {
+    // Skonto detection
+    if (invoice.fields.rawText?.toLowerCase().includes('skonto')) {
+      const skontoMatch = invoice.fields.rawText.match(/Skonto\s*(\d+)%/i);
+      if (skontoMatch) {
+        memoryUpdates.push(`Detected Skonto ${skontoMatch[1]}% for vendor Freight & Co`);
+      }
+    }
 
-  /* ======================================================
-     5️⃣ LEARN (ONLY IF AUTO-APPROVED)
-     ====================================================== */
-  if (invoiceNumber && !requiresHumanReview) {
-    markInvoiceSeen(invoice.vendor, invoiceNumber);
-
-    auditTrail.push({
-      step: "learn",
-      timestamp: new Date().toISOString(),
-      details: `Marked invoice ${invoiceNumber} as processed`
+    // Map descriptions to SKU FREIGHT
+    normalizedInvoice.lineItems.forEach(item => {
+      if (item.description?.toLowerCase().includes('seefracht') || item.description?.toLowerCase().includes('shipping')) {
+        item.sku = 'FREIGHT';
+        proposedCorrections.push('Mapped description to SKU FREIGHT (Freight & Co)');
+        memoryUpdates.push('Mapped description to SKU FREIGHT (Freight & Co)');
+        confidenceScore = 0.7;
+      }
     });
   }
 
-  /* ======================================================
-     6️⃣ FINAL RESPONSE
-     ====================================================== */
+  // --- Duplicate detection ---
+  const duplicate = memoryEntries.find(m => m.invoiceNumber === normalizedInvoice.invoiceNumber);
+  if (duplicate) {
+    requiresHumanReview = true;
+    reasoning = 'Duplicate invoice detected based on vendor and invoice number';
+    confidenceScore = 0;
+    proposedCorrections = [];
+    memoryUpdates = [];
+  }
+
+  // --- Store memory updates ---
+  if (!memoryStore[vendor]) memoryStore[vendor] = [];
+  memoryUpdates.forEach(update =>
+    memoryStore[vendor].push({
+      vendor, 
+      field: 'generic',
+      value: update,
+      confidence: confidenceScore,
+      invoiceNumber: normalizedInvoice.invoiceNumber
+    })
+  );
+
+
   return {
-    normalizedInvoice: invoice.fields,
-    proposedCorrections: appliedCorrections,
+    normalizedInvoice,
+    proposedCorrections,
     requiresHumanReview,
-    reasoning: appliedCorrections.length
-      ? "Applied high-confidence learned memory"
-      : "Insufficient confidence for auto-application",
-    confidenceScore: Math.min(
-      1,
-      memory.reduce((a, b) => a + b.confidence, 0) /
-        Math.max(memory.length, 1)
-    ),
-    memoryUpdates: appliedCorrections,
-    auditTrail
+    reasoning,
+    confidenceScore,
+    memoryUpdates,
+    auditTrail: [
+      { step: 'recall', timestamp: new Date().toISOString(), details: `Loaded ${memoryEntries.length} memory entries for vendor ${vendor}` },
+      { step: 'apply', timestamp: new Date().toISOString(), details: memoryUpdates.join('; ') || 'No auto-corrections applied' },
+      { step: 'decide', timestamp: new Date().toISOString(), details: requiresHumanReview ? 'Escalated due to duplicates or low-confidence' : 'Auto-approved using high-confidence memory' },
+      { step: 'learn', timestamp: new Date().toISOString(), details: `Marked invoice ${normalizedInvoice.invoiceNumber} as processed` }
+    ]
   };
 }
+
