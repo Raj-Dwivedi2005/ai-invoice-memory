@@ -122,12 +122,12 @@ npm run demo
 
 ### 📊 Verified Outcomes
 
-✔ Supplier GmbH service dates auto-filled
-✔ Supplier GmbH PO auto-matching
-✔ Parts AG VAT-inclusive pricing learned
-✔ Currency recovered from raw text
-✔ Freight & Co Skonto detection learned
-✔ Duplicate invoices correctly flagged
+- ✔ Supplier GmbH service dates auto-filled
+- ✔ Supplier GmbH PO auto-matching
+- ✔ Parts AG VAT-inclusive pricing learned
+- ✔ Currency recovered from raw text
+- ✔ Freight & Co Skonto detection learned
+- ✔ Duplicate invoices correctly flagged
 
 
 ---  
@@ -162,7 +162,7 @@ This repository contains the solution submitted as part of the technical assignm
 
 
 Raj Dwivedi
-📧 Email: rajiaf202704@gmail.com
-🔗 GitHub: https://github.com/Raj-Dwivedi2005
+- 📧 Email: rajiaf202704@gmail.com
+= 🔗 GitHub: https://github.com/Raj-Dwivedi2005
 
 ---
