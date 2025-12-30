@@ -58,29 +58,29 @@ are flagged for human review and do **not** create conflicting memory entries.
 ```text
 src/
 ├── agent/
-│   ├── processInvoice.ts     # Core invoice logic & learning
-│   ├── humanFeedback.ts      # Applies human corrections
-│   └── types.ts              # Shared TypeScript types
+│   ├── processInvoice.ts            # Core invoice logic & learning
+│   ├── humanFeedback.ts             # Applies human corrections
+│   └── types.ts                     # Shared TypeScript types
 │
 ├── data/
-│   ├── invoices.json         # Input invoices
-│   ├── purchase_orders.json  # Purchase order reference data
-│   ├── delivery_notes.json   # Delivery notes
-│   ├── reference_data.json   # Aggregated reference data
+│   ├── invoices.json                # Input invoices
+│   ├── purchase_orders.json         # Purchase order reference data
+│   ├── delivery_notes.json          # Delivery notes
+│   ├── reference_data.json          # Aggregated reference data
 │   └── human_corrections.json
 │
 ├── db/
-│   └── database.ts           # Memory persistence
+│   └── database.ts                  # Memory persistence
 │
 ├── demo/
-│   └── runDemo.ts            # Sequential demo runner
+│   └── runDemo.ts                   # Sequential demo runner
 │
 ├── memory/
-│   └── memory.db             # Generated at runtime
+│   └── memory.db                    # Generated at runtime
 │
 └── utils/, engine/, test/
 
-
+```
 
 ---
 
@@ -96,6 +96,7 @@ src/
 6. Memory is updated only when learning is safe
 
 Each step is logged in an **audit trail** for transparency.
+
 
 ---
 
@@ -114,6 +115,8 @@ The demo runner processes all invoices sequentially and prints:
 ```bash
 npm install
 npm run demo
+
+```
 
 --- 
 
@@ -154,7 +157,9 @@ This repository contains the solution submitted as part of the technical assignm
 ---
 
 
+
 ### 👤 Author
+
 
 Raj Dwivedi
 📧 Email: rajiaf202704@gmail.com
