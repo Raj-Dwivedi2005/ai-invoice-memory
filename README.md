@@ -163,6 +163,6 @@ This repository contains the solution submitted as part of the technical assignm
 
 Raj Dwivedi
 - 📧 Email: rajiaf202704@gmail.com
-= 🔗 GitHub: https://github.com/Raj-Dwivedi2005
+- 🔗 GitHub: https://github.com/Raj-Dwivedi2005
 
 ---
